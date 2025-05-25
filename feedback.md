@@ -6,6 +6,7 @@
 * copy c’tors  and = implementation  -5
 * 322, 328, 338 and like: must handle exception in  c’tors; should never abruptly terminate c’tor due to an exception; otherwise, you will have a var Id or reference and no object -5
 *  360  and like who handles rethrow? -2
+*  needs to be passed by ref void BST::destroy(Node* node) -2
 * 359 how do you know what happened? 
 * belongs to BST class bool buildBSTFromFile(const char* IN_FILE, BST& tree); - 2
 * 104 should be a parameter, better yet  const string: e.g. foo(“error”); foor(FAILED_INPUT); -1
