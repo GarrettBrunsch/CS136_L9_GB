@@ -3,12 +3,16 @@
 // CS_136_14728SP25P
 // Due 5/4 with cutoff 5/11
 
+// Please note the original program was designed using Visual Studio. This line is now included to ensure compatability with both online GDB and Visual Studio (syntax changes were needed that triggers this warning)
+#define _CRT_SECURE_NO_WARNINGS 
+
 #include <iostream>
 #include <iomanip>
 #include <fstream>
 #include <cctype>
 #include <cstring>
 #include <string>
+#include <limits> // GDB lacks inherent support; included for GDB compatability
 
 using namespace std;
 
@@ -30,7 +34,7 @@ public:
     Node* left = nullptr;
     Node* right = nullptr;
 
-    Node(); //FIXME
+    Node();
     Node(const char* w);
     Node(const Node& other);
     Node& operator=(const Node& other);
@@ -171,7 +175,7 @@ void replaceShortWords(fstream& file)
     if (tempFileCreated)
     {
         char tempCh;
-        while (file.get(tempCh)) 
+        while (file.get(tempCh))
         {
             tempFile.put(tempCh);
         }
@@ -193,11 +197,11 @@ void replaceShortWords(fstream& file)
 
             // Read from temp then write to original w/ replacements
             streampos writePos = 0;
-            while (readFile.get(ch)) 
+            while (readFile.get(ch))
             {
-                if (isalpha(static_cast<unsigned char>(ch))) 
+                if (isalpha(static_cast<unsigned char>(ch)))
                 {
-                    if (!inWord) 
+                    if (!inWord)
                     {
                         inWord = true;
                         wordStart = writePos;
@@ -207,22 +211,22 @@ void replaceShortWords(fstream& file)
                     file.put(ch);
                     writePos = static_cast<streampos>(static_cast<streamoff>(writePos) + 1);
                 }
-                else 
+                else
                 {
-                    if (inWord) 
+                    if (inWord)
                     {
                         inWord = false;
 
                         string lowerWord = word;
                         toLowerStr(lowerWord);
 
-                        if (lowerWord.length() <= 3) 
+                        if (lowerWord.length() <= 3)
                         {
                             file.seekp(wordStart);
                             file.write("cs136", 5);
                             writePos = static_cast<streampos>(static_cast<streamoff>(wordStart) + 5);
 
-                            if (!isspace(static_cast<unsigned char>(ch))) 
+                            if (!isspace(static_cast<unsigned char>(ch)))
                             {
                                 file.seekp(writePos);
                                 file.put(' ');
@@ -240,12 +244,12 @@ void replaceShortWords(fstream& file)
             }
 
             // last word
-            if (inWord) 
+            if (inWord)
             {
                 string lowerWord = word;
                 toLowerStr(lowerWord);
 
-                if (lowerWord.length() <= 3) 
+                if (lowerWord.length() <= 3)
                 {
                     file.seekp(wordStart);
                     file.write("cs136", 5);
@@ -316,26 +320,54 @@ Node::Node() : word(nullptr), count(0), left(nullptr), right(nullptr) {} // shou
 
 Node::Node(const char* w)
 {
-    if (w == nullptr)
-    {
-        throw invalid_argument("Word cannot be null");
-    }
-
-    size_t len = strlen(w) + 1;
-    word = new char[len];
-    strcpy_s(word, len, w);
-
     count = 1;
+    word = nullptr;
     left = nullptr;
     right = nullptr;
+
+    try
+    {
+        if (w == nullptr)
+        {
+            throw invalid_argument("Word cannot be null");
+        }
+        size_t len = strlen(w) + 1;
+        word = new char[len];
+        strncpy(word, w, len - 1);
+        word[len - 1] = '\0';
+    }
+
+    catch (...)
+    {
+        delete[] word;
+        word = nullptr;
+        count = 0;
+    }
 }
 
 Node::Node(const Node& other)
 {
     count = other.count;
-    size_t len = strlen(other.word) + 1;
-    word = new char[len];
-    strcpy_s(word, len, other.word);
+    left = nullptr;
+    right = nullptr;
+    word = nullptr;
+
+    if (other.word != nullptr)
+    {
+        size_t len = strlen(other.word) + 1;
+        try
+        {
+            word = new char[len];
+            strncpy(word, other.word, len - 1);
+            word[len - 1] = '\0';
+
+        }
+        catch (...)
+        {
+            delete[] word;
+            word = nullptr;
+        }
+    }
 }
 
 Node& Node::operator=(const Node& other)
@@ -345,18 +377,24 @@ Node& Node::operator=(const Node& other)
         char* temp_word = nullptr;
         try
         {
-            size_t len = strlen(other.word) + 1; // +1 used to account for null terminator with char
-            temp_word = new char[len];
-            strcpy_s(temp_word, len, other.word);
+            if (other.word != nullptr)
+            {
+                size_t len = strlen(other.word) + 1; // +1 used to account for null terminator with char
+                temp_word = new char[len];
+                strncpy(temp_word, other.word, len - 1);
+                temp_word[len - 1] = '\0';
 
+            }
             delete[] word;
             word = temp_word;
             count = other.count;
         }
-        catch (...)
+        catch (const std::bad_alloc &e)
         {
             delete[] temp_word;
-            throw;
+            cerr <<"Memory allocation failed during node assignment\n";
+            word = nullptr;
+            count = 0;
         }
     }
     return *this;
@@ -377,15 +415,16 @@ BST::BST()
 
 BST::BST(const BST& other)
 {
+    root = nullptr;
     try
     {
         root = copy(other.root);
     }
-    catch (...)
+    catch (const std::bad_alloc& e)
     {
         destroy(root);
         root = nullptr;
-        throw;
+        cerr << "Memory allocation failed during BST copy\n";
     }
 }
 
@@ -502,7 +541,7 @@ void BST::printHelper(Node* node)
 }
 
 /*
- 
+
 
 === Main Menu ===
 1. Read and update the input file
